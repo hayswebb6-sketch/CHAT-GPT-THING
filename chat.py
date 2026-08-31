@@ -1,20 +1,69 @@
-# Simple ChatGPT-style starter program
+import random
+import time
 
-print("=== CHAT-GPT-THING ===")
-print("Type 'quit' to exit.\n")
 
-while True:
-    message = input("You: ")
+def game():
+    print("================================")
+    print("       THE DUNGEON OF CHAOS")
+    print("================================")
+    print("You wake up in a mysterious dungeon.")
+    print("A sign says: 'Make good choices.'")
 
-    if message.lower() == "quit":
-        print("Chat: Goodbye!")
-        break
+    health = 100
+    gold = 10
+    room = 1
 
-    if "hello" in message.lower() or "hi" in message.lower():
-        print("Chat: Hello! 👋")
-    elif "how are you" in message.lower():
-        print("Chat: I'm doing great! Thanks for asking 😎")
-    elif "name" in message.lower():
-        print("Chat: I'm CHAT-GPT-THING!")
+    while health > 0:
+        print(f"\n--- Room {room} ---")
+        print(f"Health: {health} | Gold: {gold}")
+        print("1. Open the door")
+        print("2. Search the room")
+        print("3. Run away")
+
+        choice = input("> ").strip()
+
+        if choice == "1":
+            event = random.choice(["monster", "treasure", "trap", "empty"])
+
+            if event == "monster":
+                damage = random.randint(10, 30)
+                print(f"A monster attacks you! You lose {damage} HP.")
+                health -= damage
+            elif event == "treasure":
+                found = random.randint(5, 40)
+                gold += found
+                print(f"You found {found} gold!")
+            elif event == "trap":
+                damage = random.randint(5, 20)
+                print(f"It's a trap! You lose {damage} HP.")
+                health -= damage
+            else:
+                print("...Nothing happens. Suspicious.")
+
+            room += 1
+
+        elif choice == "2":
+            if random.randint(1, 3) == 1:
+                found = random.randint(1, 20)
+                gold += found
+                print(f"You found {found} gold under a rock!")
+            else:
+                print("You search everywhere and find absolutely nothing.")
+
+        elif choice == "3":
+            print("You sprint back toward the entrance...")
+            time.sleep(1)
+            print("You escaped the dungeon!")
+            break
+
+        else:
+            print("That isn't a choice. The dungeon judges you silently.")
+
+    if health <= 0:
+        print("\nYOU DIED 💀")
     else:
-        print("Chat: That's interesting. Tell me more!")
+        print(f"\nYou survived with {health} HP and {gold} gold!")
+
+
+if __name__ == "__main__":
+    game()
