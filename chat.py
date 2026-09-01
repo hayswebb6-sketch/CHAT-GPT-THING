@@ -6,16 +6,11 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 MONSTERS = {
-    "rat": ("Giant Rat", 8, 18, 8, 28),
-    "spider": ("Cave Spider", 10, 22, 10, 35),
-    "goblin": ("Goblin", 12, 26, 14, 42),
-    "zombie": ("Crypt Zombie", 15, 30, 18, 50),
-    "bat": ("Vampire Bat", 11, 25, 16, 46),
-    "serpent": ("Venom Serpent", 18, 34, 22, 65),
-    "specter": ("Lost Specter", 20, 38, 28, 75),
-    "scorpion": ("Cave Scorpion", 22, 42, 30, 85),
-    "troll": ("Stone Troll", 30, 55, 45, 120),
-    "dragon": ("Young Dragon", 45, 75, 100, 260),
+    "rat": ("Giant Rat", 8, 18, 8, 28), "spider": ("Cave Spider", 10, 22, 10, 35),
+    "goblin": ("Goblin", 12, 26, 14, 42), "zombie": ("Crypt Zombie", 15, 30, 18, 50),
+    "bat": ("Vampire Bat", 11, 25, 16, 46), "serpent": ("Venom Serpent", 18, 34, 22, 65),
+    "specter": ("Lost Specter", 20, 38, 28, 75), "scorpion": ("Cave Scorpion", 22, 42, 30, 85),
+    "troll": ("Stone Troll", 30, 55, 45, 120), "dragon": ("Young Dragon", 45, 75, 100, 260)
 }
 
 ART = {
@@ -41,148 +36,99 @@ ICONS = {
 "trap": '<svg viewBox="0 0 64 64"><path d="M5 54h54v6H5zM11 52l7-32 7 32 7-32 7 32 7-32 7 32" fill="#8b8b8b" stroke="#222" stroke-width="4"/></svg>',
 "search": '<svg viewBox="0 0 64 64"><circle cx="27" cy="27" r="18" fill="none" stroke="#e0cda2" stroke-width="6"/><path d="M41 41l16 16" stroke="#e0cda2" stroke-width="7" stroke-linecap="round"/></svg>',
 "rest": '<svg viewBox="0 0 64 64"><path d="M7 42h50v13H7z" fill="#704b31" stroke="#251811" stroke-width="5"/><path d="M10 42V29c0-7 12-7 12 0v13M22 36h33c5 0 6-8 0-8H22z" fill="#d6c29c" stroke="#251811" stroke-width="5"/></svg>',
-"exit": '<svg viewBox="0 0 64 64"><path d="M9 57V20c0-12 46-12 46 0v37" fill="#67452d" stroke="#211711" stroke-width="6"/><path d="M22 57V26c0-8 20-8 20 0v31" fill="#151515"/><circle cx="38" cy="39" r="3" fill="#d9ad3f"/></svg>'
+"exit": '<svg viewBox="0 0 64 64"><path d="M9 57V20c0-12 46-12 46 0v37" fill="#67452d" stroke="#211711" stroke-width="6"/><path d="M22 57V26c0-8 20-8 20 0v31" fill="#151515"/><circle cx="38" cy="39" r="3" fill="#d9ad3f"/></svg>',
+"skull": '<svg viewBox="0 0 64 64"><path d="M10 30C10 8 54 8 54 30c0 12-7 17-14 20v7H24v-7c-7-3-14-8-14-20z" fill="#d9d0b9" stroke="#28221c" stroke-width="5"/><circle cx="23" cy="30" r="6" fill="#28221c"/><circle cx="41" cy="30" r="6" fill="#28221c"/><path d="M25 44h14" stroke="#28221c" stroke-width="5"/></svg>'
 }
 
-def icon(name):
-    return ICONS[name]
+def icon(name): return ICONS[name]
 
 def reset_game():
-    session.update(health=100, gold=10, room=1, potions=2, monster=None, monster_hp=0, message="You enter the dungeon.", event_icon="room", combat_turn=0)
+    session.update(health=100, gold=10, room=1, potions=2, monster=None, monster_hp=0, message="You enter the dungeon.", event_icon="room")
 
 def ensure_game():
-    if "health" not in session:
-        reset_game()
+    if "health" not in session: reset_game()
 
 def spawn_monster():
-    names=list(MONSTERS)
-    weights=[25,18,16,12,10,7,4,4,3,1]
-    kind=random.choices(names, weights=weights)[0]
+    kind=random.choices(list(MONSTERS), weights=[25,18,16,12,10,7,4,4,3,1])[0]
     data=MONSTERS[kind]
     session["monster"]=kind
-    session["monster_hp"]=random.randint(data[1], data[2]) + session["room"] // 4
+    session["monster_hp"]=random.randint(data[1],data[2])+session["room"]//4
     session["message"]=f"A {data[0]} blocks your path."
     session["event_icon"]="sword"
 
 def explore():
-    session["room"] += 1
+    session["room"]+=1
     roll=random.random()
-    if session["room"] % 10 == 0:
-        session["monster"]="dragon"
-        session["monster_hp"]=90 + session["room"]
-        session["message"]="A DRAGON guards the next chamber!"
-        session["event_icon"]="sword"
-    elif roll < .52:
-        spawn_monster()
-    elif roll < .70:
-        gold=random.randint(12,35) + session["room"]
-        session["gold"] += gold
-        session["message"]=f"You found {gold} gold in an old chest."
-        session["event_icon"]="chest"
-    elif roll < .82:
-        session["potions"] += 1
-        session["message"]="You found a healing potion."
-        session["event_icon"]="potion"
-    elif roll < .92:
-        damage=random.randint(5,16)
-        session["health"]-=damage
-        session["message"]=f"A hidden trap hits you for {damage} damage."
-        session["event_icon"]="trap"
+    if session["room"]%10==0:
+        session["monster"]="dragon"; session["monster_hp"]=90+session["room"]
+        session["message"]="A DRAGON guards the next chamber!"; session["event_icon"]="sword"
+    elif roll<.52: spawn_monster()
+    elif roll<.70:
+        gold=random.randint(12,35)+session["room"]; session["gold"]+=gold
+        session["message"]=f"You found {gold} gold in an old chest."; session["event_icon"]="chest"
+    elif roll<.82:
+        session["potions"]+=1; session["message"]="You found a healing potion."; session["event_icon"]="potion"
+    elif roll<.92:
+        damage=random.randint(5,16); session["health"]-=damage
+        session["message"]=f"A hidden trap hits you for {damage} damage."; session["event_icon"]="trap"
     else:
-        heal=random.randint(10,22)
-        session["health"]=min(100, session["health"]+heal)
-        session["message"]=f"A quiet shrine restores {heal} health."
-        session["event_icon"]="rest"
+        heal=random.randint(10,22); session["health"]=min(100,session["health"]+heal)
+        session["message"]=f"A quiet shrine restores {heal} health."; session["event_icon"]="rest"
+
+def search():
+    roll=random.random()
+    if roll<.45:
+        gold=random.randint(4,22); session["gold"]+=gold; session["message"]=f"You search the room and find {gold} hidden gold."; session["event_icon"]="chest"
+    elif roll<.70:
+        session["potions"]+=1; session["message"]="You discover a forgotten potion behind a stone."; session["event_icon"]="potion"
+    elif roll<.88:
+        damage=random.randint(4,12); session["health"]-=damage; session["message"]=f"You trigger a hidden mechanism and take {damage} damage."; session["event_icon"]="trap"
+    else:
+        session["message"]="You find nothing useful. But you hear something moving nearby..."; session["event_icon"]="search"
 
 def fight():
     kind=session.get("monster")
-    if not kind:
-        session["message"]="There is nothing here to fight."
-        return
+    if not kind: session["message"]="There is nothing here to fight."; return
     name,lo,hi,glo,ghi=MONSTERS[kind]
-    damage=random.randint(10,20) + session["room"]//8
-    session["monster_hp"]-=damage
-    if session["monster_hp"] <= 0:
-        reward=random.randint(glo,ghi) + session["room"]
-        session["gold"]+=reward
-        session["monster"]=None
-        session["monster_hp"]=0
-        session["message"]=f"You defeated the {name} and found {reward} gold."
-        session["event_icon"]="chest"
-        return
-    enemy=random.randint(lo,hi)
-    session["health"]-=enemy
-    session["message"]=f"You hit the {name} for {damage}. It hits back for {enemy}."
-    session["event_icon"]="sword"
+    damage=random.randint(10,20)+session["room"]//8; session["monster_hp"]-=damage
+    if session["monster_hp"]<=0:
+        reward=random.randint(glo,ghi)+session["room"]; session["gold"]+=reward; session["monster"]=None; session["monster_hp"]=0
+        session["message"]=f"You defeated the {name} and found {reward} gold."; session["event_icon"]="chest"; return
+    enemy=random.randint(lo,hi); session["health"]-=enemy
+    session["message"]=f"You hit the {name} for {damage}. It hits back for {enemy}."; session["event_icon"]="sword"
 
 def flee():
-    if not session.get("monster"):
-        session["message"]="Nothing is chasing you."
-        return
-    if random.random() < .7:
-        session["monster"]=None
-        session["monster_hp"]=0
-        session["message"]="You escaped into the next corridor."
-        session["event_icon"]="exit"
+    if not session.get("monster"): session["message"]="Nothing is chasing you."; return
+    if random.random()<.7:
+        session["monster"]=None; session["monster_hp"]=0; session["message"]="You escaped into the next corridor."; session["event_icon"]="exit"
     else:
-        damage=random.randint(5,15)
-        session["health"]-=damage
-        session["message"]=f"You stumble while fleeing and take {damage} damage."
-        session["event_icon"]="trap"
+        damage=random.randint(5,15); session["health"]-=damage; session["message"]=f"You stumble while fleeing and take {damage} damage."; session["event_icon"]="trap"
 
 def rest():
-    if session["monster"]:
-        session["message"]="You cannot rest while a monster is here."
-        return
-    heal=random.randint(12,25)
-    session["health"]=min(100, session["health"]+heal)
-    session["message"]=f"You rest beside the cold fire and recover {heal} health."
-    session["event_icon"]="rest"
+    if session["monster"]: session["message"]="You cannot rest while a monster is here."; return
+    heal=random.randint(12,25); session["health"]=min(100,session["health"]+heal); session["message"]=f"You rest beside the cold fire and recover {heal} health."; session["event_icon"]="rest"
 
 def use_potion():
-    if session["potions"] <= 0:
-        session["message"]="Your potion bag is empty."
-        return
-    if session["health"] >= 100:
-        session["message"]="You already have full health."
-        return
-    session["potions"]-=1
-    heal=random.randint(25,40)
-    session["health"]=min(100, session["health"]+heal)
-    session["message"]=f"You drink a potion and recover {heal} health."
-    session["event_icon"]="potion"
+    if session["potions"]<=0: session["message"]="Your potion bag is empty."; return
+    if session["health"]>=100: session["message"]="You already have full health."; return
+    session["potions"]-=1; heal=random.randint(25,40); session["health"]=min(100,session["health"]+heal); session["message"]=f"You drink a potion and recover {heal} health."; session["event_icon"]="potion"
 
 @app.route("/")
 def game():
-    ensure_game()
-    action=request.args.get("action")
-    if action=="new": reset_game()
-    elif action=="explore": explore()
-    elif action=="fight": fight()
-    elif action=="flee": flee()
-    elif action=="rest": rest()
-    elif action=="potion": use_potion()
-    if session["health"] <= 0:
-        session["health"]=0
-        session["message"]="You collapse in the darkness. The dungeon wins this time."
-        session["event_icon"]="skull"
+    ensure_game(); action=request.args.get("action")
+    actions={"new":reset_game,"explore":explore,"search":search,"fight":fight,"flee":flee,"rest":rest,"potion":use_potion}
+    if action in actions: actions[action]()
+    if session["health"]<=0:
+        session["health"]=0; session["monster"]=None; session["message"]="You collapse in the darkness. The dungeon wins this time."; session["event_icon"]="skull"
     return render_template_string(PAGE, session=session, icon=icon, art=ART.get(session.get("monster")), monster_data=MONSTERS.get(session.get("monster")))
 
 @app.route("/reset")
-def reset():
-    reset_game()
-    return redirect("/")
+def reset(): reset_game(); return redirect("/")
 
 PAGE="""
 <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dungeon of Chaos</title><style>
-*{box-sizing:border-box}body{margin:0;background:#090807;color:#e9dfca;font-family:Georgia,serif;min-height:100vh;padding:22px;background-image:radial-gradient(circle at 50% 0,#33261a 0,#090807 55%)}
-.game{max-width:940px;margin:auto}.title{text-align:center;font-size:46px;letter-spacing:5px;color:#e0b76b;text-shadow:0 4px 0 #2b1b10,0 0 18px #a06b2b;margin:4px 0}.sub{text-align:center;color:#958a78;margin:0 0 20px;font-family:Arial,sans-serif}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}.stat{background:#171411;border:2px solid #4e3c28;border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:9px;box-shadow:inset 0 0 15px #080706}.stat .icon{width:32px;height:32px;display:inline-block}.icon svg{width:100%;height:100%;display:block}.stat b{display:block;font:700 12px Arial;color:#897d6a;text-transform:uppercase;letter-spacing:1px}.stat span{font:700 19px Arial;color:#eee}.bar{height:9px;background:#302923;border:1px solid #080706;border-radius:8px;margin-top:5px;overflow:hidden}.hp{height:100%;background:#b9443f;transition:width .5s}.room{background:#100e0c;border:3px solid #55432e;border-radius:18px;min-height:440px;position:relative;padding:22px;box-shadow:0 15px 50px #000,inset 0 0 45px #000}.room:before{content:"";position:absolute;inset:12px;border:1px solid #35291e;border-radius:12px;pointer-events:none}.scene{min-height:270px;display:flex;align-items:center;justify-content:center;flex-direction:column}.event-icon{width:72px;height:72px;margin:4px auto 12px}.message{text-align:center;font:22px Arial,sans-serif;color:#d8cdb9;min-height:54px}.monster{width:min(430px,85%);filter:drop-shadow(0 14px 8px #000);animation:idle 2.5s ease-in-out infinite}.monster svg{width:100%;height:auto;display:block}.monster-hit{animation:hit .22s linear 1}.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.btn{border:2px solid #5b472f;background:#1d1813;color:#e9dfca;border-radius:10px;padding:12px 18px;font:bold 15px Arial;cursor:pointer;text-decoration:none;min-width:125px;text-align:center;box-shadow:0 5px 0 #080706;transition:.12s}.btn:hover{transform:translateY(-2px);background:#2b2118;border-color:#9b7543}.btn.danger{border-color:#753934}.btn.good{border-color:#587047}.log{margin-top:16px;background:#0d0c0a;border:1px solid #392d21;border-radius:10px;padding:10px 14px;color:#766c5e;font:13px Arial;text-align:center}.footer{text-align:center;color:#554c41;font:12px Arial;margin-top:15px}@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}@keyframes hit{0%,100%{transform:translateX(0)}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}@media(max-width:650px){.stats{grid-template-columns:repeat(2,1fr)}.title{font-size:31px}.room{min-height:400px}.btn{min-width:110px;padding:11px 12px}}
-</style></head><body><main class="game"><h1 class="title">DUNGEON OF CHAOS</h1><p class="sub">Every room has a story. Not all of them end well.</p>
-<section class="stats"><div class="stat"><div class="icon">{{ icon('health')|safe }}</div><div><b>Health</b><span>{{session.health}} / 100</span><div class="bar"><div class="hp" style="width:{{session.health}}%"></div></div></div></div><div class="stat"><div class="icon">{{ icon('gold')|safe }}</div><div><b>Gold</b><span>{{session.gold}}</span></div></div><div class="stat"><div class="icon">{{ icon('room')|safe }}</div><div><b>Room</b><span>{{session.room}}</span></div></div><div class="stat"><div class="icon">{{ icon('potion')|safe }}</div><div><b>Potions</b><span>{{session.potions}}</span></div></div></section>
-<section class="room"><div class="scene">{% if art %}<div class="monster">{{art|safe}}</div><div class="message"><strong>{{monster_data[0]}}</strong> — {{session.monster_hp}} HP<br>{{session.message}}</div>{% else %}<div class="event-icon">{{icon(session.event_icon)|safe}}</div><div class="message">{{session.message}}</div>{% endif %}</div>
-<div class="controls">{% if session.health <= 0 %}<a class="btn danger" href="/?action=new">START OVER</a>{% elif session.monster %}<a class="btn danger" href="/?action=fight">FIGHT</a><a class="btn" href="/?action=flee">FLEE</a><a class="btn" href="/?action=potion">USE POTION</a>{% else %}<a class="btn good" href="/?action=explore">EXPLORE</a><a class="btn" href="/?action=search">SEARCH</a><a class="btn" href="/?action=rest">REST</a><a class="btn" href="/?action=potion">DRINK POTION</a>{% endif %}</div></section>
-<div class="log">Room {{session.room}} • {{'A monster is blocking the way.' if session.monster else 'The corridor is quiet... for now.'}}</div><div class="footer">Reach room 10, 20, 30... to face a dragon.</div></main></body></html>
+*{box-sizing:border-box}body{margin:0;background:#090807;color:#e9dfca;font-family:Georgia,serif;min-height:100vh;padding:22px;background-image:radial-gradient(circle at 50% 0,#33261a 0,#090807 55%)}.game{max-width:940px;margin:auto}.title{text-align:center;font-size:46px;letter-spacing:5px;color:#e0b76b;text-shadow:0 4px 0 #2b1b10,0 0 18px #a06b2b;margin:4px 0}.sub{text-align:center;color:#958a78;margin:0 0 20px;font-family:Arial,sans-serif}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}.stat{background:#171411;border:2px solid #4e3c28;border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:9px;box-shadow:inset 0 0 15px #080706}.stat .icon{width:32px;height:32px}.icon svg{width:100%;height:100%;display:block}.stat b{display:block;font:700 12px Arial;color:#897d6a;text-transform:uppercase;letter-spacing:1px}.stat span{font:700 19px Arial;color:#eee}.bar{height:9px;background:#302923;border:1px solid #080706;border-radius:8px;margin-top:5px;overflow:hidden}.hp{height:100%;background:#b9443f;transition:width .5s}.room{background:#100e0c;border:3px solid #55432e;border-radius:18px;min-height:440px;position:relative;padding:22px;box-shadow:0 15px 50px #000,inset 0 0 45px #000}.room:before{content:"";position:absolute;inset:12px;border:1px solid #35291e;border-radius:12px;pointer-events:none}.scene{min-height:270px;display:flex;align-items:center;justify-content:center;flex-direction:column}.event-icon{width:72px;height:72px;margin:4px auto 12px}.message{text-align:center;font:22px Arial,sans-serif;color:#d8cdb9;min-height:54px}.monster{width:min(430px,85%);filter:drop-shadow(0 14px 8px #000);animation:idle 2.5s ease-in-out infinite}.monster svg{width:100%;height:auto;display:block}.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.btn{border:2px solid #5b472f;background:#1d1813;color:#e9dfca;border-radius:10px;padding:12px 18px;font:bold 15px Arial;cursor:pointer;text-decoration:none;min-width:125px;text-align:center;box-shadow:0 5px 0 #080706;transition:.12s}.btn:hover{transform:translateY(-2px);background:#2b2118;border-color:#9b7543}.btn.danger{border-color:#753934}.btn.good{border-color:#587047}.log{margin-top:16px;background:#0d0c0a;border:1px solid #392d21;border-radius:10px;padding:10px 14px;color:#766c5e;font:13px Arial;text-align:center}.footer{text-align:center;color:#554c41;font:12px Arial;margin-top:15px}@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}@media(max-width:650px){.stats{grid-template-columns:repeat(2,1fr)}.title{font-size:31px}.room{min-height:400px}.btn{min-width:110px;padding:11px 12px}}
+</style></head><body><main class="game"><h1 class="title">DUNGEON OF CHAOS</h1><p class="sub">Every room has a story. Not all of them end well.</p><section class="stats"><div class="stat"><div class="icon">{{ icon('health')|safe }}</div><div><b>Health</b><span>{{session.health}} / 100</span><div class="bar"><div class="hp" style="width:{{session.health}}%"></div></div></div></div><div class="stat"><div class="icon">{{ icon('gold')|safe }}</div><div><b>Gold</b><span>{{session.gold}}</span></div></div><div class="stat"><div class="icon">{{ icon('room')|safe }}</div><div><b>Room</b><span>{{session.room}}</span></div></div><div class="stat"><div class="icon">{{ icon('potion')|safe }}</div><div><b>Potions</b><span>{{session.potions}}</span></div></div></section><section class="room"><div class="scene">{% if art %}<div class="monster">{{art|safe}}</div><div class="message"><strong>{{monster_data[0]}}</strong> — {{session.monster_hp}} HP<br>{{session.message}}</div>{% else %}<div class="event-icon">{{icon(session.event_icon)|safe}}</div><div class="message">{{session.message}}</div>{% endif %}</div><div class="controls">{% if session.health<=0 %}<a class="btn danger" href="/?action=new">START OVER</a>{% elif session.monster %}<a class="btn danger" href="/?action=fight">FIGHT</a><a class="btn" href="/?action=flee">FLEE</a><a class="btn" href="/?action=potion">USE POTION</a>{% else %}<a class="btn good" href="/?action=explore">EXPLORE</a><a class="btn" href="/?action=search">SEARCH</a><a class="btn" href="/?action=rest">REST</a><a class="btn" href="/?action=potion">DRINK POTION</a>{% endif %}</div></section><div class="log">Room {{session.room}} • {{'A monster is blocking the way.' if session.monster else 'The corridor is quiet... for now.'}}</div><div class="footer">Reach room 10, 20, 30... to face a dragon.</div></main></body></html>
 """
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001)
+if __name__ == "__main__": app.run(host="0.0.0.0", port=5001)
