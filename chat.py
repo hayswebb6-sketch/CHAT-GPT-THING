@@ -11,6 +11,7 @@ PAGE = """
 <head>
 <title>Dungeon of Chaos</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/monsters.css">
 <style>
 * { box-sizing:border-box; }
 body { margin:0; min-height:100vh; background:radial-gradient(circle at top,#30251d,#090909 65%); color:#eee; font-family:Arial,sans-serif; padding:25px; }
@@ -21,14 +22,15 @@ h1 { font-size:44px; margin:5px; text-shadow:0 0 12px #b78b4a; }
 .stat { padding:15px 8px; border:1px solid #555; border-radius:12px; background:#222; font-size:20px; }
 .bar { height:12px; background:#333; border-radius:20px; overflow:hidden; margin-top:8px; }
 .hp { height:100%; width:{{ health }}%; background:#b33; transition:width .3s; }
-.event { min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:25px; margin:25px 0; padding:25px; border-radius:15px; background:#202020; border:1px solid #444; text-align:center; }
-.monster { font-size:62px; margin-bottom:8px; filter:drop-shadow(0 0 8px #000); }
+.event { min-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:25px; margin:25px 0; padding:20px; border-radius:15px; background:#202020; border:1px solid #444; text-align:center; }
+.monster-card { background:#151515; border:2px solid #51402d; border-radius:16px; padding:10px 24px; margin-bottom:12px; min-width:250px; }
+.monster-label { font-size:28px; font-weight:bold; }
+.monster-sub { color:#aaa; font-size:14px; }
 .buttons { display:flex; flex-wrap:wrap; justify-content:center; }
 button { padding:15px 20px; margin:7px; font-size:17px; cursor:pointer; border-radius:10px; border:1px solid #777; background:#292929; color:white; transition:.15s; }
 button:hover { transform:translateY(-3px) scale(1.04); background:#444; box-shadow:0 5px 15px #000; }
 .good:hover { background:#205d32; } .danger:hover { background:#702020; } .magic:hover { background:#50306d; }
 .log { text-align:left; margin-top:25px; padding:15px; background:#111; border-radius:12px; color:#aaa; font-size:14px; }
-a { color:#ddd; }
 @media(max-width:650px) { .stats { grid-template-columns:repeat(2,1fr); } h1{font-size:32px;} .event{font-size:20px;} }
 </style>
 </head>
@@ -42,7 +44,16 @@ a { color:#ddd; }
 <div class="stat">🚪 Floor {{ room }}</div>
 <div class="stat">🧪 {{ potions }} potion(s)</div>
 </div>
-<div class="event">{{ message|safe }}</div>
+<div class="event">
+{% if monster %}
+<div class="monster-card">
+<div class="monster {{ monster }}"><div class="body"></div><div class="eye left"></div><div class="eye right"></div></div>
+<div class="monster-label">{{ monster_name }}</div>
+<div class="monster-sub">A creature lurks in the darkness...</div>
+</div>
+{% endif %}
+<div>{{ message|safe }}</div>
+</div>
 {% if dead %}
 <h2>💀 YOU DIED</h2>
 <p>The dungeon wins this round.</p>
@@ -74,25 +85,30 @@ def new_game():
     session["potions"] = 2
 
 
+MONSTERS = {
+    "rat": ("Giant Rat", 5, 14, 4, 15),
+    "spider": ("Cave Spider", 7, 17, 5, 18),
+    "goblin": ("Goblin", 8, 21, 8, 25),
+    "zombie": ("Crypt Zombie", 10, 24, 10, 30),
+    "bat": ("Vampire Bat", 6, 18, 7, 28),
+    "serpent": ("Venom Serpent", 9, 26, 12, 35),
+    "specter": ("Lost Specter", 12, 29, 15, 40),
+    "scorpion": ("Cave Scorpion", 11, 27, 15, 42),
+    "troll": ("Stone Troll", 18, 34, 25, 60),
+    "dragon": ("Young Dragon", 25, 45, 50, 120),
+}
+
+
 def monster_event():
-    monsters = [
-        ("🐀", "Giant Rat", 5, 15, 8, 22),
-        ("🕷️", "Cave Spider", 7, 18, 10, 28),
-        ("👺", "Goblin", 8, 22, 12, 30),
-        ("🧟", "Crypt Zombie", 10, 26, 15, 38),
-        ("🦇", "Vampire Bat", 6, 20, 14, 35),
-        ("🐍", "Venom Serpent", 9, 24, 18, 42),
-        ("👻", "Lost Specter", 12, 28, 20, 48),
-        ("🦂", "Cave Scorpion", 11, 30, 22, 50),
-        ("🧌", "Stone Troll", 16, 35, 25, 65),
-        ("🐲", "Young Dragon", 20, 40, 40, 90),
-    ]
-    icon, name, min_damage, max_damage, min_gold, max_gold = random.choice(monsters)
-    damage = random.randint(min_damage, max_damage)
-    reward = random.randint(min_gold, max_gold)
+    names = list(MONSTERS)
+    weights = [24, 18, 17, 12, 10, 7, 4, 4, 3, 1]
+    kind = random.choices(names, weights=weights)[0]
+    name, low_damage, high_damage, low_gold, high_gold = MONSTERS[kind]
+    damage = random.randint(low_damage, high_damage)
+    gold = random.randint(low_gold, high_gold)
     session["health"] -= damage
-    session["gold"] += reward
-    return f'<div class="monster">{icon}</div><b>{name}!</b><br>You take {damage} damage but defeat it and find {reward} gold!'
+    session["gold"] += gold
+    return kind, name, damage, gold
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -103,14 +119,17 @@ def game():
     message = "Choose your next move..."
     dead = False
     won = False
+    monster = None
+    monster_name = ""
 
     if request.method == "POST" and session["health"] > 0:
         choice = request.form.get("choice")
 
         if choice == "door":
-            event = random.choices(["monster", "treasure", "trap", "merchant", "nothing", "boss"], weights=[34, 23, 14, 9, 15, 5])[0]
+            event = random.choices(["monster", "treasure", "trap", "merchant", "nothing", "boss"], weights=[38, 22, 14, 9, 13, 4])[0]
             if event == "monster":
-                message = monster_event()
+                monster, monster_name, damage, reward = monster_event()
+                message = f"You take {damage} damage but defeat it and find {reward} gold!"
             elif event == "treasure":
                 found = random.randint(10, 60)
                 session["gold"] += found
@@ -127,11 +146,13 @@ def game():
                 else:
                     message = "🧙 <b>Mysterious Merchant</b><br>He looks at your empty wallet and walks away."
             elif event == "boss":
+                monster = "dragon"
+                monster_name = "Dungeon Guardian"
                 damage = random.randint(15, 35)
                 reward = random.randint(50, 120)
                 session["health"] -= damage
                 session["gold"] += reward
-                message = f"🐉 <b>DUNGEON GUARDIAN!</b><br>You take {damage} damage but grab {reward} gold!"
+                message = f"You take {damage} damage but grab {reward} gold!"
             else:
                 message = random.choice([
                     "👁️ The room is completely empty. Somehow that's worse.",
@@ -156,9 +177,10 @@ def game():
             elif roll == 3:
                 damage = random.randint(2, 8)
                 session["health"] -= damage
-                message = f"🕷️ <b>SPIDER NEST!</b><br>You disturb the spiders! -{damage} HP."
+                message = f"🕸️ A hidden web triggers a tiny swarm! -{damage} HP."
             elif roll == 4:
-                message = monster_event()
+                monster, monster_name, damage, reward = monster_event()
+                message = f"It hits you for {damage} damage, but you recover {reward} gold."
             else:
                 message = random.choice([
                     "🔎 You search everywhere. Nothing but suspicious dust.",
@@ -195,9 +217,9 @@ def game():
         if session["health"] <= 0:
             session["health"] = 0
             dead = True
-            message = "💀 <b>The dungeon has claimed another victim...</b>"
+            message = "The dungeon has claimed another victim..."
 
-    return render_template_string(PAGE, health=session["health"], gold=session["gold"], room=session["room"], potions=session["potions"], message=message, dead=dead, won=won)
+    return render_template_string(PAGE, health=session["health"], gold=session["gold"], room=session["room"], potions=session["potions"], message=message, dead=dead, won=won, monster=monster, monster_name=monster_name)
 
 
 @app.route("/reset")
