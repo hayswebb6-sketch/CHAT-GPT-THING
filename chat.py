@@ -10,25 +10,33 @@ PAGE = """
 <html>
 <head>
 <title>Dungeon of Chaos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body { background: radial-gradient(circle, #252525, #090909); color:#eee; font-family:Arial,sans-serif; text-align:center; padding:25px; }
-.box { max-width:800px; margin:auto; padding:30px; border:2px solid #555; border-radius:18px; background:#151515; box-shadow:0 0 30px #000; }
-h1 { font-size:42px; }
-.stats { display:flex; justify-content:center; gap:25px; flex-wrap:wrap; font-size:21px; margin:20px; }
-.stat { padding:10px 16px; border:1px solid #555; border-radius:10px; background:#222; }
-.event { min-height:70px; font-size:25px; margin:25px 0; padding:20px; border-radius:12px; background:#202020; }
-button { padding:14px 20px; margin:7px; font-size:17px; cursor:pointer; border-radius:9px; border:1px solid #777; background:#292929; color:white; transition:.15s; }
-button:hover { transform:scale(1.06); background:#444; }
-.danger:hover { background:#702020; }
-.good:hover { background:#205d32; }
-a { color:#aaa; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; background:radial-gradient(circle at top,#30251d,#090909 65%); color:#eee; font-family:Arial,sans-serif; padding:25px; }
+.box { max-width:900px; margin:auto; padding:30px; border:2px solid #66533c; border-radius:20px; background:rgba(18,18,18,.96); box-shadow:0 0 35px #000; }
+h1 { font-size:44px; margin:5px; text-shadow:0 0 12px #b78b4a; }
+.subtitle { color:#aaa; margin-bottom:25px; }
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:20px 0; }
+.stat { padding:15px 8px; border:1px solid #555; border-radius:12px; background:#222; font-size:20px; }
+.bar { height:12px; background:#333; border-radius:20px; overflow:hidden; margin-top:8px; }
+.hp { height:100%; width:{{ health }}%; background:#b33; transition:width .3s; }
+.event { min-height:100px; display:flex; align-items:center; justify-content:center; font-size:25px; margin:25px 0; padding:25px; border-radius:15px; background:#202020; border:1px solid #444; }
+.buttons { display:flex; flex-wrap:wrap; justify-content:center; }
+button { padding:15px 20px; margin:7px; font-size:17px; cursor:pointer; border-radius:10px; border:1px solid #777; background:#292929; color:white; transition:.15s; }
+button:hover { transform:translateY(-3px) scale(1.04); background:#444; box-shadow:0 5px 15px #000; }
+.good:hover { background:#205d32; } .danger:hover { background:#702020; } .magic:hover { background:#50306d; }
+.log { text-align:left; margin-top:25px; padding:15px; background:#111; border-radius:12px; color:#aaa; font-size:14px; }
+a { color:#ddd; }
+@media(max-width:650px) { .stats { grid-template-columns:repeat(2,1fr); } h1{font-size:32px;} .event{font-size:20px;} }
 </style>
 </head>
 <body>
 <div class="box">
 <h1>⚔️ DUNGEON OF CHAOS ⚔️</h1>
+<div class="subtitle">Every door is a terrible idea.</div>
 <div class="stats">
-<div class="stat">❤️ {{ health }}/100</div>
+<div class="stat">❤️ {{ health }}/100<div class="bar"><div class="hp"></div></div></div>
 <div class="stat">💰 {{ gold }} gold</div>
 <div class="stat">🚪 Floor {{ room }}</div>
 <div class="stat">🧪 {{ potions }} potion(s)</div>
@@ -36,19 +44,22 @@ a { color:#aaa; }
 <div class="event">{{ message }}</div>
 {% if dead %}
 <h2>💀 YOU DIED</h2>
+<p>The dungeon wins this round.</p>
 <form action="/reset"><button class="good">🔄 New Adventure</button></form>
 {% elif won %}
-<h2>🏆 YOU ESCAPED THE DUNGEON!</h2>
-<form action="/reset"><button class="good">🔄 Play Again</button></form>
+<h2>🏆 ADVENTURE COMPLETE!</h2>
+<p>You escaped with <b>{{ gold }} gold</b>.</p>
+<form action="/reset"><button class="good">🔄 New Adventure</button></form>
 {% else %}
-<form method="post">
-<button name="choice" value="door">🚪 Explore</button>
-<button name="choice" value="search">🔎 Search</button>
-<button name="choice" value="potion">🧪 Drink Potion</button>
-<button name="choice" value="rest">🛏️ Rest</button>
-<button name="choice" value="run" class="danger">🏃 Leave Dungeon</button>
-</form>
+<div class="buttons">
+<form method="post"><button name="choice" value="door">🚪 Explore</button></form>
+<form method="post"><button name="choice" value="search">🔎 Search</button></form>
+<form method="post"><button class="magic" name="choice" value="potion">🧪 Drink Potion</button></form>
+<form method="post"><button name="choice" value="rest">🛏️ Rest</button></form>
+<form method="post"><button class="danger" name="choice" value="run">🏃 Escape</button></form>
+</div>
 {% endif %}
+<div class="log">📜 <b>Dungeon tip:</b> Search for supplies, save potions for emergencies, and don't trust suspiciously quiet rooms.</div>
 </div>
 </body>
 </html>
@@ -75,11 +86,7 @@ def game():
         choice = request.form.get("choice")
 
         if choice == "door":
-            event = random.choices(
-                ["monster", "treasure", "trap", "merchant", "nothing", "boss"],
-                weights=[30, 25, 15, 10, 15, 5]
-            )[0]
-
+            event = random.choices(["monster", "treasure", "trap", "merchant", "nothing", "boss"], weights=[30, 25, 15, 10, 15, 5])[0]
             if event == "monster":
                 damage = random.randint(8, 25)
                 session["health"] -= damage
@@ -88,17 +95,14 @@ def game():
                     reward = random.randint(5, 20)
                     session["gold"] += reward
                     message += f" You defeat it and find {reward} gold!"
-
             elif event == "treasure":
                 found = random.randint(10, 60)
                 session["gold"] += found
                 message = f"💎 JACKPOT! You found {found} gold!"
-
             elif event == "trap":
                 damage = random.randint(5, 20)
                 session["health"] -= damage
                 message = f"🪤 FLOOR SPIKES! You lose {damage} HP!"
-
             elif event == "merchant":
                 if session["gold"] >= 15:
                     session["gold"] -= 15
@@ -106,29 +110,21 @@ def game():
                     message = "🧙 A mysterious merchant sells you a potion for 15 gold."
                 else:
                     message = "🧙 A merchant appears... but you don't have enough gold."
-
             elif event == "boss":
                 damage = random.randint(15, 35)
                 session["health"] -= damage
                 reward = random.randint(50, 120)
                 session["gold"] += reward
-                message = f"🐉 A dungeon guardian attacks! You survive, take {damage} damage, and grab {reward} gold!"
-
+                message = f"🐉 A dungeon guardian attacks! You take {damage} damage but grab {reward} gold!"
             else:
-                message = random.choice([
-                    "The room is completely empty. Somehow that's worse.",
-                    "You hear footsteps... then realize they're your own.",
-                    "Nothing happens. The dungeon is judging you. 👁️"
-                ])
-
+                message = random.choice(["The room is completely empty. Somehow that's worse.", "You hear footsteps... then realize they're your own.", "Nothing happens. The dungeon is judging you. 👁️"])
             session["room"] += 1
-
             if session["room"] >= 21 and session["health"] > 0:
                 won = True
                 message = f"🏆 You reached the surface with {session['gold']} gold!"
 
         elif choice == "search":
-            roll = random.randint(1, 4)
+            roll = random.randint(1, 5)
             if roll == 1:
                 found = random.randint(15, 45)
                 session["gold"] += found
@@ -136,6 +132,10 @@ def game():
             elif roll == 2:
                 session["potions"] += 1
                 message = "🔎 You find a dusty potion behind a loose brick!"
+            elif roll == 3:
+                damage = random.randint(2, 8)
+                session["health"] -= damage
+                message = f"🕷️ You disturb a nest of spiders! -{damage} HP."
             else:
                 message = "🔎 You search everywhere. Nothing but suspicious dust."
 
@@ -145,7 +145,7 @@ def game():
                 healing = random.randint(20, 40)
                 old_health = session["health"]
                 session["health"] = min(100, session["health"] + healing)
-                message = f"🧪 You drink a potion and recover {session['health'] - old_health} HP!"
+                message = f"🧪 You recover {session['health'] - old_health} HP!"
             else:
                 message = "🧪 You reach for a potion... and remember you have ZERO."
 
@@ -168,15 +168,7 @@ def game():
             dead = True
             message = "💀 The dungeon has claimed another victim..."
 
-    return render_template_string(PAGE,
-        health=session["health"],
-        gold=session["gold"],
-        room=session["room"],
-        potions=session["potions"],
-        message=message,
-        dead=dead,
-        won=won
-    )
+    return render_template_string(PAGE, health=session["health"], gold=session["gold"], room=session["room"], potions=session["potions"], message=message, dead=dead, won=won)
 
 
 @app.route("/reset")
