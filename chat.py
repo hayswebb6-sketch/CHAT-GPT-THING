@@ -21,7 +21,8 @@ h1 { font-size:44px; margin:5px; text-shadow:0 0 12px #b78b4a; }
 .stat { padding:15px 8px; border:1px solid #555; border-radius:12px; background:#222; font-size:20px; }
 .bar { height:12px; background:#333; border-radius:20px; overflow:hidden; margin-top:8px; }
 .hp { height:100%; width:{{ health }}%; background:#b33; transition:width .3s; }
-.event { min-height:100px; display:flex; align-items:center; justify-content:center; font-size:25px; margin:25px 0; padding:25px; border-radius:15px; background:#202020; border:1px solid #444; }
+.event { min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:25px; margin:25px 0; padding:25px; border-radius:15px; background:#202020; border:1px solid #444; text-align:center; }
+.monster { font-size:62px; margin-bottom:8px; filter:drop-shadow(0 0 8px #000); }
 .buttons { display:flex; flex-wrap:wrap; justify-content:center; }
 button { padding:15px 20px; margin:7px; font-size:17px; cursor:pointer; border-radius:10px; border:1px solid #777; background:#292929; color:white; transition:.15s; }
 button:hover { transform:translateY(-3px) scale(1.04); background:#444; box-shadow:0 5px 15px #000; }
@@ -41,7 +42,7 @@ a { color:#ddd; }
 <div class="stat">🚪 Floor {{ room }}</div>
 <div class="stat">🧪 {{ potions }} potion(s)</div>
 </div>
-<div class="event">{{ message }}</div>
+<div class="event">{{ message|safe }}</div>
 {% if dead %}
 <h2>💀 YOU DIED</h2>
 <p>The dungeon wins this round.</p>
@@ -73,6 +74,27 @@ def new_game():
     session["potions"] = 2
 
 
+def monster_event():
+    monsters = [
+        ("🐀", "Giant Rat", 5, 15, 8, 22),
+        ("🕷️", "Cave Spider", 7, 18, 10, 28),
+        ("👺", "Goblin", 8, 22, 12, 30),
+        ("🧟", "Crypt Zombie", 10, 26, 15, 38),
+        ("🦇", "Vampire Bat", 6, 20, 14, 35),
+        ("🐍", "Venom Serpent", 9, 24, 18, 42),
+        ("👻", "Lost Specter", 12, 28, 20, 48),
+        ("🦂", "Cave Scorpion", 11, 30, 22, 50),
+        ("🧌", "Stone Troll", 16, 35, 25, 65),
+        ("🐲", "Young Dragon", 20, 40, 40, 90),
+    ]
+    icon, name, min_damage, max_damage, min_gold, max_gold = random.choice(monsters)
+    damage = random.randint(min_damage, max_damage)
+    reward = random.randint(min_gold, max_gold)
+    session["health"] -= damage
+    session["gold"] += reward
+    return f'<div class="monster">{icon}</div><b>{name}!</b><br>You take {damage} damage but defeat it and find {reward} gold!'
+
+
 @app.route("/", methods=["GET", "POST"])
 def game():
     if "health" not in session:
@@ -86,45 +108,44 @@ def game():
         choice = request.form.get("choice")
 
         if choice == "door":
-            event = random.choices(["monster", "treasure", "trap", "merchant", "nothing", "boss"], weights=[30, 25, 15, 10, 15, 5])[0]
+            event = random.choices(["monster", "treasure", "trap", "merchant", "nothing", "boss"], weights=[34, 23, 14, 9, 15, 5])[0]
             if event == "monster":
-                damage = random.randint(8, 25)
-                session["health"] -= damage
-                message = f"👹 A goblin ambushes you! You take {damage} damage!"
-                if random.randint(1, 4) == 1:
-                    reward = random.randint(5, 20)
-                    session["gold"] += reward
-                    message += f" You defeat it and find {reward} gold!"
+                message = monster_event()
             elif event == "treasure":
                 found = random.randint(10, 60)
                 session["gold"] += found
-                message = f"💎 JACKPOT! You found {found} gold!"
+                message = f"💎 <b>JACKPOT!</b><br>You found {found} gold!"
             elif event == "trap":
                 damage = random.randint(5, 20)
                 session["health"] -= damage
-                message = f"🪤 FLOOR SPIKES! You lose {damage} HP!"
+                message = f"🪤 <b>FLOOR SPIKES!</b><br>You lose {damage} HP!"
             elif event == "merchant":
                 if session["gold"] >= 15:
                     session["gold"] -= 15
                     session["potions"] += 1
-                    message = "🧙 A mysterious merchant sells you a potion for 15 gold."
+                    message = "🧙 <b>Mysterious Merchant</b><br>A potion costs 15 gold. Deal!"
                 else:
-                    message = "🧙 A merchant appears... but you don't have enough gold."
+                    message = "🧙 <b>Mysterious Merchant</b><br>He looks at your empty wallet and walks away."
             elif event == "boss":
                 damage = random.randint(15, 35)
-                session["health"] -= damage
                 reward = random.randint(50, 120)
+                session["health"] -= damage
                 session["gold"] += reward
-                message = f"🐉 A dungeon guardian attacks! You take {damage} damage but grab {reward} gold!"
+                message = f"🐉 <b>DUNGEON GUARDIAN!</b><br>You take {damage} damage but grab {reward} gold!"
             else:
-                message = random.choice(["The room is completely empty. Somehow that's worse.", "You hear footsteps... then realize they're your own.", "Nothing happens. The dungeon is judging you. 👁️"])
+                message = random.choice([
+                    "👁️ The room is completely empty. Somehow that's worse.",
+                    "👣 You hear footsteps... then realize they're your own.",
+                    "🌫️ Nothing happens. The dungeon is judging you.",
+                    "🕯️ A candle flickers by itself. You decide not to investigate.",
+                ])
             session["room"] += 1
             if session["room"] >= 21 and session["health"] > 0:
                 won = True
-                message = f"🏆 You reached the surface with {session['gold']} gold!"
+                message = f"🏆 <b>You reached the surface with {session['gold']} gold!</b>"
 
         elif choice == "search":
-            roll = random.randint(1, 5)
+            roll = random.randint(1, 7)
             if roll == 1:
                 found = random.randint(15, 45)
                 session["gold"] += found
@@ -135,9 +156,17 @@ def game():
             elif roll == 3:
                 damage = random.randint(2, 8)
                 session["health"] -= damage
-                message = f"🕷️ You disturb a nest of spiders! -{damage} HP."
+                message = f"🕷️ <b>SPIDER NEST!</b><br>You disturb the spiders! -{damage} HP."
+            elif roll == 4:
+                message = monster_event()
             else:
-                message = "🔎 You search everywhere. Nothing but suspicious dust."
+                message = random.choice([
+                    "🔎 You search everywhere. Nothing but suspicious dust.",
+                    "🔎 You find a rusty coin. It is worth exactly 1 gold.",
+                    "🔎 You discover a secret passage... that leads back to the same room.",
+                ])
+                if "rusty coin" in message:
+                    session["gold"] += 1
 
         elif choice == "potion":
             if session["potions"] > 0:
@@ -147,7 +176,7 @@ def game():
                 session["health"] = min(100, session["health"] + healing)
                 message = f"🧪 You recover {session['health'] - old_health} HP!"
             else:
-                message = "🧪 You reach for a potion... and remember you have ZERO."
+                message = "🧪 You reach for a potion... and remember you have <b>ZERO</b>."
 
         elif choice == "rest":
             if random.randint(1, 3) == 1:
@@ -166,7 +195,7 @@ def game():
         if session["health"] <= 0:
             session["health"] = 0
             dead = True
-            message = "💀 The dungeon has claimed another victim..."
+            message = "💀 <b>The dungeon has claimed another victim...</b>"
 
     return render_template_string(PAGE, health=session["health"], gold=session["gold"], room=session["room"], potions=session["potions"], message=message, dead=dead, won=won)
 
